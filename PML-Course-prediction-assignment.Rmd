@@ -1,0 +1,227 @@
+---
+title: "PML-Course-prediction-assignment"
+author: "c zingler"
+date: "07/08/2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+## Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. 
+
+These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. 
+
+One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. 
+
+In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. 
+They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+Data The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment. (so cited).
+
+## Introduction
+
+Our data is already available for download.
+So lets begin first steps to set a local working directory for download of files. 
+Then download them for further processing.
+
+
+Read more: http:/groupware.les.inf.puc-rio.br/har#dataset#ixzz4TjwlLtt3
+
+
+However lets note we are going to predict the classe variable in the data,
+classe is defined as follows:
+
+* (Class A) task is done exactly according to the specification
+* (Class B) task is done by throwing the elbows to the front
+* (Class C) task is done by lifting the dumbbell only halfway
+* (Class D) task is done by lowering the dumbbell only halfway
+* (Class E) task is done by throwing the hips to the front
+
+
+* Class A corresponds to the specified execution of the exercise, while the other 4 classes correspond to common mistakes.
+
+Read more: http:/groupware.les.inf.puc-rio.br/har#dataset#ixzz4Tk05eLHD
+
+## Executive Summary
+Our model building methodology is *Question *Input *Features *Algorithm
+*Prediction *Evaluation.
+
+The resultant model is a highly accurate fit with greater than 99% accuracy
+and less than 1% out of sample error.
+
+Our chosen model is Random Forest, as it best models the data's outcomes.
+
+
+```{r echo=TRUE}
+
+## setup environment
+## getwd() ## *if necessary to know where the resultant files are stored. 
+## the project files will be created and stored here.
+
+file.create("pml-training.csv")
+file.create("pml-testing.csv")
+## this R command will create new blank files - even if they already exist
+
+download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv","pml-training.csv")
+download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv","pml-testing.csv" )
+## this R command will populate the local file from the current internet files, even if they are
+## not initialized
+
+library(caret)
+## the caret package makes machine learning possible in R
+## load data in data frames for processing
+
+train_data <- read.csv("pml-training.csv")
+test_data <- read.csv("pml-testing.csv")
+
+## lets clean up the data starting with train_data
+## str(train_data) ##*reqired if you want to look at the data structure
+
+
+## Fix data that is empty("") or Div/0! or NA to zero(0)
+
+train_data[train_data==""]<- NA
+train_data[train_data=="#DIV/0!"]<- NA
+train_data[is.na(train_data)]<- 0
+
+
+## let us now remove the first 7 variables to make the data more anonymous
+## and since it adds little value to prediction.
+
+train_data<-train_data[,-c(1:7)]
+
+## str(train_data) ## required for inspecting data
+## now lets do it for test_data
+## str(test_data) ## required for inspecting data
+## Fix data that is empty("") or Div/0! or NA to zero(0)
+
+test_data[test_data==""]<- NA
+test_data[test_data=="#DIV/0!"]<- NA
+test_data[is.na(test_data)]<- 0
+
+## let us now remove the first 7 variables to make the data more anonymous and it adds 
+## little value to prediction.
+
+test_data<-test_data[,-c(1:7)]
+
+## str(test_data) ## required for inspecting data
+
+## lets set and check out the levels of the factor variable
+
+train_data$classe <- as.factor(train_data$classe)
+levels(train_data$classe)
+
+## this is unnecessary for the test_data as it does not have
+## this factor variable - the test set is what we 
+## will do our prediction on and use this data set to predict this 
+##factor variable.
+
+```
+
+## Prepare for the prediction phase 
+
+But first some more cleaning by culling variables that adds little value to
+making predictions with the resultant algorithm.
+
+
+```{r echo=TRUE}
+## lets set up the sets by getting rid of the near zero variables
+## that do not add value to the predictors.
+## 
+dim(train_data)
+dim(test_data)
+nzv <- nearZeroVar(train_data,saveMetrics = FALSE)
+## so we now remove them from the training and testing data
+
+train_data <- train_data[,-nzv]
+test_data <- test_data[,-nzv]
+## checking how many prediction variables we have after cleansing.
+dim(train_data)
+dim(test_data)
+
+## we have managed to remove 100 unnecessary variables.
+## so lets do the model building, but first lets set a seed to help with repeat runs
+set.seed(54321)
+
+
+```
+
+## Prediction modeling
+I have decided to try both Random Forests (rf), and CART classification 
+and regression trees (rpart) in a cross-validation control setting (cv).
+
+```{r echo=TRUE}
+## partition the training data in to a training and validation
+##set
+inTrain <- createDataPartition(y=train_data$classe,p=0.6,list = FALSE)
+train_data1 <- train_data[inTrain, ]
+valid_data1 <- train_data[-inTrain, ]
+
+## check data after split
+dim(train_data1)
+dim(valid_data1)
+
+## so first lets set the cross validation control
+control <- trainControl(method = "cv",number = 3, verboseIter = FALSE)
+
+## Random forest first
+fit_rf <- train(classe~.,method="rf",dat=train_data1, trControl=control)
+
+fit_rf$finalModel
+
+## now lets look at CART Model
+
+fit_rpart <- train(classe~.,method="rpart",dat=train_data1,trControl=control)
+
+fit_rpart$finalModel
+
+## now lets find out how accurate they are
+
+
+```
+## Evalute models
+By doing prediction on the validation set.
+
+```{r echo=TRUE}
+predrf <- predict(fit_rf,newdata = valid_data1)
+
+predrpart <- predict(fit_rpart, newdata= valid_data1)
+
+## so lets look at the confusion matrix of models
+
+confusionMatrix(valid_data1$classe,predrf)
+
+confusionMatrix(valid_data1$classe,predrpart)
+
+## we see the Random forest model is far more accurate
+## with an out of sample error < 1% which is quite low,  
+## and the Accuracy is quite high at > 99%
+## the most important variables for this prediction are
+varImp(fit_rf)
+
+## lastly we have to do a prediction on the supplied Test data
+print(predict(fit_rf,newdata = test_data))
+
+```
+## Conclusion
+we see the Random forest model is far more accurate
+with an out of sample error < 1% which is quite low,  
+and the Accuracy is quite high at > 99%
+
+Further I applied the final generated classe variables to the prediction quiz
+and received a perfect score, implying the prediction model is excellent.
+We can in fact predict the manner in which the exercise was done by wearing these
+devices.
+
+
+
