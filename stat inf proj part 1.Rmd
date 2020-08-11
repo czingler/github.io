@@ -1,0 +1,154 @@
+---
+title: "Statistical Inference Course Project part 1"
+author: "c zingler"
+date: "19/05/2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+ Overview
+=============
+
+Part 1 is a simulation exercise, in this part we will investigate the exponential distribution in R and compare it with the Central Limit Theorem. The exponential distribution can be simulated in R with rexp(n, lambda) where lambda is the rate parameter. The mean of exponential distribution is 1/lambda and the standard deviation is also 1/lambda. Set lambda = 0.2 for all of the simulations. You will investigate the distribution of averages of 40 generated exponentials.
+
+Tasks
+------------
+We will need to do a thousand simulations.
+Illustrate the properties of the distribution of the mean of 40 exponentials generated.
+Show the sample mean and compare it to the theoretical mean of the distribution.
+Show how variable the sample is (via variance) and compare it to the theoretical variance of the distribution.
+Show that the distribution is approximately normal.
+
+so the theoretical mean is 1/lambda = 1/0,2 = 5 = E[X]
+the theoretical standard deviation is also 5 so variance is 25 (5^2) = Xar(X)
+so Standard error = 5/sqrt(n).
+
+
+
+Simulations and Analysis
+------------------------
+
+
+We have following setup The exponential distribution can be simulated in R with rexp(n, lambda) where lambda is the 
+rate parameter. The mean of exponential distribution is 1/lambda and the standard deviation is also 1/lambda.
+
+
+
+
+```{r, echo=TRUE,eval=TRUE,}
+
+# set the required parameters
+
+lambda <- 0.2
+
+N<-40
+
+sims <-1000
+
+# run the simulation
+sim_exp <- replicate(sims,rexp(N,lambda), simplify = FALSE)
+
+# convert by coertion the Matrix of listed results to a list of means
+laggmeans <- lapply(sim_exp,mean)
+
+# convert the list to a numeric vector also be coertion
+naggmeans <- unlist(laggmeans)
+
+# so the sample mean of the simulated distribution is
+sample_meanexp <- mean(naggmeans)
+
+#show a plot of the simulated mean density function
+plotmean <- hist(naggmeans, breaks =  40,xlim = c(2,9),main = "exponential distribution of means",
+col= "cyan", xlab = "simulated means")
+```
+
+```{r, echo=TRUE,eval=TRUE,}
+# now the theoretical mean is 1/lambda so
+theo_mean <- 1/lambda
+
+# lets look at the difference in means
+
+diff_mean <- theo_mean-sample_meanexp
+
+print(diff_mean)
+# this difference (or mean comparision) is small 
+
+
+# Now plot density with mean hilighted
+plotmean_point <- hist(naggmeans, breaks =  40,xlim = c(2,9),main = "exponential distribution of means",
+col= "cyan", xlab = "simulated means")  
+
+plotmean_point <- abline(v= sample_meanexp,lwd= "4", col= "red")
+
+
+
+# Now lets do a variance comparision
+Sample_var <- var(naggmeans)
+
+#the sample variance is
+print(Sample_var)
+
+# and Theoretical Variance is
+Theo_var <-(1/lambda)^2/N
+
+print(Theo_var)
+
+#So the difference in variance is
+Diff_var <- Theo_var-Sample_var
+
+#which is
+print(Diff_var)
+
+# the Difference is also quite small
+```
+
+Now lets compare the density histogram of the 1000 simulations with a normal curve based on the theoretical mean of 1/lambda and the theoretical stand deviation of 1/lambda.
+
+
+```{r}
+
+# Now let look at the density function and see how closely it matches a normal distribtion of the theoretical mean
+
+
+ 
+ library(ggplot2)
+ggplot(data.frame(y=naggmeans), aes(x=y)) + 
+  geom_histogram(aes(y=..density..), binwidth=0.2, fill="#0072B2", 
+                 color="black") +
+  stat_function(fun=dnorm, args = list(mean=lambda^-1, 
+                                    sd=(lambda*sqrt(N))^-1), 
+                size=2) +
+  labs(title="Plot of the Simulations", x="Simulation Mean")
+
+
+```
+
+
+We can on inspection see the density function and the over laid normal curve match farly closely.
+
+let look at the 95% confidence interval
+
+```{r echo=TRUE}
+
+#So we need 
+1/lambda +c(-1,1)*1.96*(lambda^-1)/sqrt(N)
+
+```
+
+As we can see this range covers most of the simulated density function.
+
+Conclusion
+============
+
+The Central limits theorem 
+--------------------------
+CLT states that the distribution of averages of iid variables becomes that of a standard
+normal as the sample size increases.
+
+Is correct for this simulation.

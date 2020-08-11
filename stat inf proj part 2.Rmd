@@ -1,0 +1,150 @@
+---
+title: "Statistical inference project part 2"
+author: "c zingler"
+date: "20/05/2020"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Overview
+=========
+Part 2: Basic Inferential Data Analysis, Now in the second portion of the project, we're going to analyze the ToothGrowth data in the R datasets package.
+
+Tasks
+------
+Load the ToothGrowth data and perform some basic exploratory data analyses.
+
+Provide a basic summary of the data.
+
+Use confidence intervals and/or hypothesis tests to compare tooth growth by supp and dose.
+
+State your conclusions and the assumptions needed for your conclusions.
+
+Description
+------------
+The tooth growth data set is the length of the odontoblasts (teeth) in each of 10 guinea pigs at three Vitamin C 
+dosage levels (0.5, 1, and 2 mg) with two delivery methods (orange juice or ascorbic acid)
+
+Citation from Google source RPubs
+
+
+Analysis
+---------
+So the 10 guinea pigs are administered in two different ways, by delivery method, and by dose.
+
+So we have two different Hypothyses.
+
+hypothesis 1, delivery has an effect on growth.
+
+hypothesis 2, dose has an effect on growth.
+
+So we need to subset the toothgrowth data in the two categories to effectively test these hypothyses.
+We will use t tests to see if we can reject the null hypothesis in each category.
+
+```{r echo=TRUE}
+library(datasets)
+# so lets see what we are dealing with, and if we have pairing
+dim(ToothGrowth)
+
+head(ToothGrowth)
+
+table(ToothGrowth$supp)
+
+table(ToothGrowth$dose)
+
+```
+So we will have one test for delivery as only two types to compare for group means
+and three tests for dose to compare the group means.
+
+
+Let look at a box plot for delivery method.
+```{r echo=TRUE}
+#lets look at a box plot for Delivery method
+boxplot(len~supp,ToothGrowth,main = "Delivery VS Growth", col= "pink")
+
+```
+
+Also lets look at the box plot for dose level
+```{r echo=TRUE}
+#lets look at a box plot for Dosage level
+boxplot(len~dose,ToothGrowth, main = "Dose VS Growth" , col= "cyan")
+
+
+```
+From inspection of the plots, there does not seem to be a case to reject hypothesis of no difference note the P-value
+is greater than 0.05, in results based on delivery method. 
+
+However there does seem to be a case to reject hypothesis of no difference based on dose.
+
+let us check this with t tests..
+
+
+Lets look at delivery method.
+
+
+
+```{r}
+# lets subset the data for delivery
+g1 <- subset(ToothGrowth, supp== "OJ", select = c(len))
+#and
+ g2 <- subset(ToothGrowth, supp== "VC", select = c(len))
+ 
+ #So lets do a Welch Two Sample t-test even though they are the same subjects we can not 
+ # Guarantee the elements are paired.
+ 
+ t.test(g1,g2)
+
+```
+From this we see that there is not enough evidence to reject the null hypothesis, 
+that orange juice and ascorbic acid deliver the same growth.
+
+
+Now we need to look at the dosage.
+So we need 3 subsets at the 0.5, 1.0, and 2.0 dose levels
+
+
+
+
+```{r echo=TRUE}
+# lets subset the data.
+d05 <- subset(ToothGrowth, dose== 0.5, select = c(len))
+d10 <- subset(ToothGrowth, dose== 1.0, select = c(len))
+d20 <- subset(ToothGrowth, dose== 2.0, select = c(len))
+
+#so lets run the t tests
+t.test(d05,d10)
+
+t.test(d05,d20)
+
+t.test(d10,d20)
+```
+
+
+
+So we have respective P-values
+d05/d10 = 1.268e-07
+d05/d20 = 4.398e-14
+d10/d20 = 1.906e-05
+
+
+All are significantly small enough to indicate we reject the null hypothesis, have no impact on growth level.
+Clearly basded on these P-values they do.
+
+I have assumed the subjects are not paired in the various subsets obtained.
+
+Conculsion
+==========
+With this set of data.
+
+There is no eveidence that the delivery method of vitamin C has a impact on increased tooth growth.
+
+There is eveidence increasing the delivered dose increases tooth growth.
+
+
+
+
