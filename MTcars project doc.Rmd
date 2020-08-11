@@ -1,0 +1,164 @@
+---
+title: "MTcars regression project"
+author: "c zingler"
+date: "16/06/2020"
+output:
+  html_document:
+    df_print: paged
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Motor Trends Cars Linear Regression Analysis  
+## Executive Summary  
+We will be analyzing the Motor Trend Car Road Tests data, it  comprises 
+fuel consumption and 10 aspects of automobile design and performance for 32 automobiles (1973–74 models).  
+This data was compiled in 1974.
+Simply put we’re asking the question, which types of cars: manual or
+automatic transmission cars goes the furthest, using (mpg) as an
+indication.
+The findings are:
+Manual cars are more fuel efficient.  For this Data set they go on average 7.245 miles further per gallon.
+
+
+## Project requirement
+We are to approach this task as a typical business initiated investigation,
+thus we can not assume a through understanding of statistic by the audience
+
+### Data description
+
+Data Table name: mtcars  
+
+Format
+A data frame with 32 observations on 11 (numeric) variables.
+
+[, 1]	mpg         Miles/(US) gallon  
+[, 2]	cyl	        Number of cylinders  
+[, 3]	disp        Displacement (cu.in.)  
+[, 4]	hp          Gross horsepower  
+[, 5]	drat        Rear axle ratio  
+[, 6]	wt	        Weight (1000 lbs)  
+[, 7]	qsec        1/4 mile time  
+[, 8]	vs	        Engine (0 = V-shaped, 1 = straight)  
+[, 9]	am	        Transmission (0 = automatic, 1 = manual)  
+[,10]	gear        Number of forward gears
+[,11]	carb        Number of carburetors  
+
+### Preparing the data for analysis 
+
+```{r ehco=TRUE}
+##load the graphics pakage in case of need
+library(ggplot2)
+## Load the data of interest
+data(mtcars)
+## Now we need to ensure some of the columns are factors for easier linear model fitting
+mtcars$cyl <- factor(mtcars$cyl)
+mtcars$vs <- factor(mtcars$vs)
+mtcars$am <- factor(mtcars$am)
+mtcars$gear <- factor(mtcars$gear)
+mtcars$carb <- factor(mtcars$carb)
+
+## show the data
+head(mtcars,10)
+
+```
+## Exploritory analysis  
+
+From the Scatter plot we can see the is a strong relationship between MPG 
+and Cyl, Disp, Hp, Drat, Wt and am.  This needs some quantification, please
+read below for subsequent discussion.
+In particular the relationship between MPG and Automatic and Manual
+transmissions.
+
+So lets look at MPG under a single regressor of interest.
+```{r echo=TRUE,strip.white=TRUE}
+basefit <- lm(mpg~am,data = mtcars)
+summary(basefit)
+##and
+basefit1 <- lm(mpg~am-1,data = mtcars)
+summary(basefit1)
+
+```
+
+So there is a 7.245 decrease in MPG for Automatic transmissions, and the 
+second linear model details the MPG mean for each type of transmission.
+This can be verified by inspecting Appendix Fig.2
+
+Now lets investigate a linear model of factors of interest.
+But note disp and wt are related, as well as drat and hp being related. So run the model without them.
+
+```{r echo=TRUE, strip.white=TRUE}
+bestfit <- lm(mpg~cyl+hp+wt+am,data = mtcars)
+summary(bestfit)
+## and now for there means
+bestfit1 <- lm(mpg~cyl+hp+wt+am-1,data = mtcars)
+summary(bestfit1)
+```
+
+So all components are quite significant as the model has an R-squared of
+86.59%. A very high degree of correlation
+
+Now lets perform an ANOVA to compare the models
+
+```{r echo=TRUE, strip.white=TRUE}
+anova(basefit,bestfit)
+
+```
+
+So the P-value is very small and quite significant, therefore
+We reject the Null hypothesis that WT, cyl, and hp do not contribute to the model accuracy.
+
+### Inference on effect of Transmition on MPG
+lets perform a T Test.
+```{r echo=TRUE,strip.white=TRUE}
+t.test(mpg~am,data = mtcars)
+
+```
+
+And we see that the Type of transmission has a significant impact on the
+level of Miles pre Gallon achieved. that is greater than a 95% confidence,
+as seen in the T Test.
+
+## Appendix 
+### Residual, Diagnostics and Plots
+
+We compute some regression diagnostics on the bestfit model residuals
+
+```{r echo=TRUE,strip.white=TRUE, fig.width=6.5, fig.height=5.5}
+par(mfrow = c(2,2))
+plot(bestfit)
+```
+
+From the above plots, we can make the following observations,
+
+* The points in the Residuals vs. Fitted plot seem to be randomly scattered
+on the plot and verify the independence condition. 
+* The Normal Q-Q plot consists of the points which mostly fall on the line
+indicating that the residuals are normally distributed. 
+* The Scale-Location plot consists of points scattered in a constant band
+pattern, indicating constant variance.
+* There are some distinct points of interest (outliers or leverage points)
+in the top right of the plots. 
+
+We now compute some regression diagnostics of our model to find out these
+interesting leverage points as shown in the following section.  
+```{r echo=TRUE,strip.white=TRUE}
+Lev <- hatvalues(bestfit)
+tail(sort(Lev),3)
+resinf <- dfbetas(bestfit)
+tail(sort(resinf[,6]),3)
+```
+The same cars are mentioned in the residual plots, our analysis looks
+correct.    
+```{r echo=FALSE, strip.white=FALSE, fig.width=6.5, fig.height=3.9}
+par(mfcol =c(1,1))
+plot(mtcars)
+
+```
+Scatter plots matrix of MTCARS dataset  
+```{r echo=FALSE ,strip.white=TRUE ,fig.width=6.5, fig.height=2.5}
+par(mfcol =c(1,2))
+boxplot(mpg~am ,data = mtcars, col=(c("pink","cyan")), xlab = "Transmisson  ( 0= Automatic, 1= Manual", ylab = "Miles per Gallon", main= "Fig 2 MPG vs Transmission")
+boxplot(mpg~cyl, data = mtcars, col=(c("red","green","blue")), xlab= "Number of Cylinders", ylab= "miles per gallon", main= "Fig 3 MPG Vs Cylinders")
+```
+e
